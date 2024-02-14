@@ -1,2 +1,7 @@
-# file-to-string-vector
-A quick utility class, transforming a file to a vector of strings, each string a line of the file.
+# std::vector<std::string> Utility
+A quick utility class, with some useful features:
+
+- Read a file into a vector of strings
+- Filter strings
+- Apply transformations to all the strings
+- And more!
