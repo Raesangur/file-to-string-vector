@@ -42,8 +42,9 @@
  *  INCLUDES
  */
 #include <algorithm>
-#include <iostream>
 #include <fstream>
+#include <functional>
+#include <iostream>
 #include <regex>
 #include <string>
 #include <vector>
@@ -74,6 +75,8 @@ public:
 
     void filter_remove(const std::string& regex);
     void filter_keep(const std::string& regex);
+
+    void transform(const std::function<std::string&> func);
 
     void remove_first();
     void remove_last();
@@ -130,6 +133,7 @@ void stringvec::read_file(const std::string& path)
     }
 }
 
+
 /** -----------------------------------------------------------------------------------------------
  * @brief Check all strings against a provided regex, remove all strings that match the regex.
  * @param regex: Regular Expression to check against.
@@ -161,6 +165,19 @@ void stringvec::filter_keep(const std::string& regex)
                              }),
               vec.end());
 }
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Apply a function to all the elements of the vector
+ * @param func: Function to apply
+ */
+void transform(const std::function<std::string(std::string&)> func)
+{
+    std::for_each(vec.begin(), vec.end(), [](std::string& s) {
+        s = func(s)
+    });
+}
+
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Remove first element from the vector.
