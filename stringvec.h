@@ -6,6 +6,7 @@
  * @file    stringvec.h
  * @author  Pascal-Emmanuel Lachance
  * @p       <a href="https://www.github.com/Raesangur">Raesangur</a>
+ * @p       <a href="https://www.raesangur.com/">https://www.raesangur.com/</a>
  *
  * @brief   A quick utility class, with some useful features:
  *           - Read a file into a vector of strings
@@ -33,10 +34,61 @@
  * NON INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * ------------------------------------------------------------------------------------------------
+ * File History:
+ * @version 0.1
+ * 2024-02-14 - Raesangur
+ *      - Project creation
+ *      - Implementation of most class members
+ *      - Creation of some unit tests, work remains to be done on unit tests
+ * 
+ * @version 0.2
+ * 2024-02-16 - Raesangur
+ *      - Added the `transform` method
+ * 
+ * @version 0.3
+ * 2024-02-29 - Raesangur
+ *      - Added an example to the documentation
+ *      - Added the `remove_nth` method
+ *      - Given an output stream parameter to the `print` method.
+ *      - Various improvements
+ *      
+ * ------------------------------------------------------------------------------------------------
+ * @code
+ * // Example usage:
+ *      StringVec sv;                    // Creating string vector
+ *      sv.read_file("example.txt");     // Read the content of "example.txt"
+ *      sv.filter_keep("^.*apple.*$");   // Filter all words containing "apple"
+ *      sv.transform([](std::string& s)
+ *                   {
+ *                       return std::toupper(s);
+ *                   });                 // Convert all strings to uppercase
+ *      sv.remove_first();               // Remove first element
+ *      sv.remove_last();                // Remove last element
+ *      sv.print();                      // Print the filtered and transformed strings
+ * 
+ * // With example.txt as:
+ *      pineapple
+ *      lorem
+ *      ipsum
+ *      dolor
+ *      sit
+ *      amet
+ *      boneappletea
+ *      pear
+ *      Apple
+ *      apple pie
+ * 
+ * // Would print:
+ *      BONEAPPLETEA
+ *      APPLE
+ *      
+ * @endcode
  * ===============================================================================================
  */
 #ifndef STRINGVEC_H
 #define STRINGVEC_H
+
 
 /** ===============================================================================================
  *  INCLUDES
@@ -50,6 +102,7 @@
 #include <vector>
 
 
+
 /** ===============================================================================================
  *  CLASS DEFINITION
  *
@@ -58,7 +111,7 @@
  */
 
 /** -----------------------------------------------------------------------------------------------
- * @class   STRINGVEC
+ * @class   stringvec
  *
  * @brief   Vector of string utility class.
  */
@@ -76,22 +129,25 @@ public:
     void filter_remove(const std::string& regex);
     void filter_keep(const std::string& regex);
 
-    void transform(const std::function<std::string&> func);
+    void transform(const std::function<const std::string&> func);
 
     void remove_first();
     void remove_last();
+    void remove_nth(std::size_t pos);
 
     const std::vector<std::string>& get() const;
     std::vector<std::string>&       get();
 
-    void print() const;
+    void print(std::ostream& os = std::cout) const;
 
+private:
     std::vector<std::string> vec;
 };
 
 /**
  * @}
  */
+
 
 
 /** ===============================================================================================
@@ -144,7 +200,7 @@ void stringvec::filter_remove(const std::string& regex)
 
     vec.erase(std::remove_if(vec.begin(),
                              vec.end(),
-                             [&](const std::string& s) {
+                             [&reg](const std::string& s) {
                                  return std::regex_match(s, reg);
                              }),
               vec.end());
@@ -160,7 +216,7 @@ void stringvec::filter_keep(const std::string& regex)
 
     vec.erase(std::remove_if(vec.begin(),
                              vec.end(),
-                             [&](const std::string& s) {
+                             [&reg](const std::string& s) {
                                  return !std::regex_match(s, reg);
                              }),
               vec.end());
@@ -171,7 +227,7 @@ void stringvec::filter_keep(const std::string& regex)
  * @brief Apply a function to all the elements of the vector
  * @param func: Function to apply
  */
-void transform(const std::function<std::string(std::string&)> func)
+void stringvec::transform(const std::function<std::string(const std::string&)> func)
 {
     std::for_each(vec.begin(), vec.end(), [](std::string& s) {
         s = func(s)
@@ -195,6 +251,17 @@ void stringvec::remove_last()
     vec.erase(vec.end());
 }
 
+/** -----------------------------------------------------------------------------------------------
+* @brief Remove an element from the vector from its index.
+*/
+void stringvec::remove_nth(std::size_t pos)
+{
+    if (vec.begin() + pos >= vec.end())
+        return;
+
+    vec.erase(vec.begin() + pos);
+}
+
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Get the vector of strings.
@@ -212,22 +279,27 @@ const std::vector<std::string>& stringvec::get() const
     return vec;
 }
 
+
 /** -----------------------------------------------------------------------------------------------
  * @brief Print the vector of strings line by line, then flush the output buffer.
  */
-void stringvec::print() const
+void stringvec::print(std::ostream& os) const
 {
     for(const std::string& s : vec)
     {
-        std::cout << s << '\n';
+        os << s << '\n';
     }
-    std::cout << std::endl;
+
+    // Add new line and flush output buffer
+    os << std::endl;
 }
 
 
 /**
  * @}
  */
+
+
 
 #endif        // STRINGVEC_H
 /**
