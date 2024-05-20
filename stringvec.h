@@ -56,6 +56,7 @@
  * @version 0.4
  * 2024-05-09 - Raesangur
  *      - Inlined all methods
+ *      - Converted `std::string` arguments to `std::string_view`
  *      - Added the `begin`, `cbegin`, `end` and `cend` methods
  *      - Added the [] operator
  *      - Fixed bug in `transform`
