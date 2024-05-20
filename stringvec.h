@@ -52,6 +52,13 @@
  *      - Added the `remove_nth` method
  *      - Given an output stream parameter to the `print` method.
  *      - Various improvements
+ * 
+ * @version 0.4
+ * 2024-05-09 - Raesangur
+ *      - Inlined all methods
+ *      - Added the `begin`, `cbegin`, `end` and `cend` methods
+ *      - Added the [] operator
+ *      - Fixed bug in `transform`
  *      
  * ------------------------------------------------------------------------------------------------
  * @code
@@ -122,23 +129,33 @@ public:
     stringvec()                  = default;
     stringvec(const stringvec&)  = default;
     stringvec(const stringvec&&) = delete;
-    stringvec(const std::vector<std::string>& orig);
+    stringvec(const std::vector<std::string>& orig) : vec{orig} {};
 
-    void read_file(const std::string& path);
+    inline void read_file(const std::string_view path);
 
-    void filter_remove(const std::string& regex);
-    void filter_keep(const std::string& regex);
+    inline void filter_remove(const std::string_view regex);
+    inline void filter_keep(const std::string_view regex);
 
-    void transform(const std::function<const std::string&> func);
+    inline void transform(const std::function<std::string(const std::string_view)> func);
 
-    void remove_first();
-    void remove_last();
-    void remove_nth(std::size_t pos);
+    inline void remove_first();
+    inline void remove_last();
+    inline void remove_nth(std::size_t pos);
 
-    const std::vector<std::string>& get() const;
-    std::vector<std::string>&       get();
+    inline std::vector<std::string>&       get();
+    inline const std::vector<std::string>& get() const;
 
-    void print(std::ostream& os = std::cout) const;
+    inline std::vector<std::string>::iterator begin();
+    inline std::vector<std::string>::const_iterator begin() const;
+    inline std::vector<std::string>::const_iterator cbegin() const;
+    inline std::vector<std::string>::iterator end();
+    inline std::vector<std::string>::const_iterator end() const;
+    inline std::vector<std::string>::const_iterator cend() const;
+
+    inline std::string& operator[](std::size_t index);
+    inline const std::string& operator[](std::size_t index) const;
+
+    inline void print(std::ostream& os = std::cout) const;
 
 private:
     std::vector<std::string> vec;
@@ -157,28 +174,19 @@ private:
  * @{
  */
 
-/** -----------------------------------------------------------------------------------------------
- * @brief Vector of string copy constructor.
- *
- * @param orig: Vector of string to copy.
- */
-stringvec::stringvec(const std::vector<std::string>& orig)
-{
-    vec = orig;
-}
-
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Read a file line by line, pushing each line into the vector of string.
  * @param path File to read the line from.
  */
-void stringvec::read_file(const std::string& path)
+inline void stringvec::read_file(const std::string_view path)
 {
+    std::string pathString{path};
     /* Check if file is valid and open it. */
-    std::ifstream input(path);
+    std::ifstream input(pathString);
     if(!input)
     {
-        throw std::runtime_error("Couldn't open file: " + path);
+        throw std::runtime_error("Couldn't open file: " + pathString);
     }
 
     /* Read all lines of file into the vector. */
@@ -194,9 +202,9 @@ void stringvec::read_file(const std::string& path)
  * @brief Check all strings against a provided regex, remove all strings that match the regex.
  * @param regex: Regular Expression to check against.
  */
-void stringvec::filter_remove(const std::string& regex)
+inline void stringvec::filter_remove(const std::string_view regex)
 {
-    std::regex reg{regex};
+    std::regex reg{std::string{regex}};
 
     vec.erase(std::remove_if(vec.begin(),
                              vec.end(),
@@ -210,9 +218,9 @@ void stringvec::filter_remove(const std::string& regex)
  * @brief Check all strings against a provided regex, keep only strings that match the regex.
  * @param regex: Regular Expression to check against.
  */
-void stringvec::filter_keep(const std::string& regex)
+inline void stringvec::filter_keep(const std::string_view regex)
 {
-    std::regex reg{regex};
+    std::regex reg{std::string{regex}};
 
     vec.erase(std::remove_if(vec.begin(),
                              vec.end(),
@@ -227,10 +235,10 @@ void stringvec::filter_keep(const std::string& regex)
  * @brief Apply a function to all the elements of the vector
  * @param func: Function to apply
  */
-void stringvec::transform(const std::function<std::string(const std::string&)> func)
+inline void stringvec::transform(const std::function<std::string(const std::string_view)> func)
 {
-    std::for_each(vec.begin(), vec.end(), [](std::string& s) {
-        s = func(s)
+    std::for_each(begin(), end(), [func](std::string& s) {
+        s = func(s);
     });
 }
 
@@ -238,52 +246,99 @@ void stringvec::transform(const std::function<std::string(const std::string&)> f
 /** -----------------------------------------------------------------------------------------------
  * @brief Remove first element from the vector.
  */
-void stringvec::remove_first()
+inline void stringvec::remove_first()
 {
-    vec.erase(vec.begin());
+    vec.erase(begin());
 }
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Remove last element from the vector.
  */
-void stringvec::remove_last()
+inline void stringvec::remove_last()
 {
-    vec.erase(vec.end());
+    vec.erase(end());
 }
 
 /** -----------------------------------------------------------------------------------------------
 * @brief Remove an element from the vector from its index.
 */
-void stringvec::remove_nth(std::size_t pos)
+inline void stringvec::remove_nth(std::size_t pos)
 {
-    if (vec.begin() + pos >= vec.end())
+    if (begin() + pos >= end())
         return;
 
-    vec.erase(vec.begin() + pos);
+    vec.erase(begin() + pos);
 }
 
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Get the vector of strings.
  */
-std::vector<std::string>& stringvec::get()
+inline std::vector<std::string>& stringvec::get()
 {
     return vec;
 }
 
-/** -----------------------------------------------------------------------------------------------
- * @brief Get the vector of strings.
- */
-const std::vector<std::string>& stringvec::get() const
+inline const std::vector<std::string>& stringvec::get() const
 {
     return vec;
+}
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Get an iterator to the first element of the vector.
+ */
+inline std::vector<std::string>::iterator stringvec::begin()
+{
+    return vec.begin();
+}
+
+inline std::vector<std::string>::const_iterator stringvec::begin() const
+{
+    return begin();
+}
+
+inline std::vector<std::string>::const_iterator stringvec::cbegin() const
+{
+    return begin();
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Get an iterator to the last element of the vector.
+ */
+inline std::vector<std::string>::iterator stringvec::end()
+{
+    return vec.end();
+}
+
+inline std::vector<std::string>::const_iterator stringvec::end() const
+{
+    return end();
+}
+
+inline std::vector<std::string>::const_iterator stringvec::cend() const
+{
+    return end();
+}
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Get the string at position `index`.
+ */
+inline std::string& stringvec::operator[](std::size_t index)
+{
+    return vec[index];
+}
+inline const std::string& stringvec::operator[](std::size_t index) const
+{
+    return this->operator[](index);
 }
 
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Print the vector of strings line by line, then flush the output buffer.
  */
-void stringvec::print(std::ostream& os) const
+inline void stringvec::print(std::ostream& os) const
 {
     for(const std::string& s : vec)
     {
