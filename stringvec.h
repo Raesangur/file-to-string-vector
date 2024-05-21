@@ -10,8 +10,7 @@
  *
  * @brief   A quick utility class, with some useful features:
  *           - Read a file into a vector of strings
- *           - Filter strings
- *           - Apply transformations to all the strings
+ *           - Filter, order, transform, search and access strings
  *           - And more!
  *
  * ------------------------------------------------------------------------------------------------
@@ -60,6 +59,15 @@
  *      - Added the `begin`, `cbegin`, `end` and `cend` methods
  *      - Added the [] operator
  *      - Fixed bug in `transform`
+ * 
+ * @version 0.5
+ * 2024-05-20 - Raesangur
+ *      - Added filter methods taking a function object
+ *      - Added sorting algorithms
+ *      - Added `find` and `rfind` methods
+ *      - Added `reverse` method
+ *      - Added `trim` method
+ *      - Added member types iterators
  *      
  * ------------------------------------------------------------------------------------------------
  * @code
@@ -126,6 +134,11 @@
 class stringvec
 {
 public:
+    using iter   = std::vector<std::string>::iterator;
+    using riter  = std::vector<std::string>::reverse_iterator;
+    using citer  = std::vector<std::string>::const_iterator;
+    using criter = std::vector<std::string>::const_reverse_iterator;
+
     ~stringvec()                 = default;
     stringvec()                  = default;
     stringvec(const stringvec&)  = default;
@@ -134,26 +147,54 @@ public:
 
     inline void read_file(const std::string_view path);
 
-    inline void filter_remove(const std::string_view regex);
-    inline void filter_keep(const std::string_view regex);
-
-    inline void transform(const std::function<std::string(const std::string_view)> func);
+    // Filtering
+    inline void filter_remove(const std::function<bool(const std::string)> func);
+    inline void filter_remove(const std::string& regex);
+    inline void filter_keep  (const std::function<bool(const std::string)> func);
+    inline void filter_keep  (const std::string& regex);
+    inline void filter_empty (bool keep_whitespace = false);
 
     inline void remove_first();
     inline void remove_last();
     inline void remove_nth(std::size_t pos);
 
+    // Transforming
+    inline void transform(const std::function<std::string(const std::string)> func);
+    inline void trim();
+
+    // Ordering
+    inline void reverse();
+    inline void sort(const std::function<bool(const std::string_view,
+                                              const std::string_view)> func);
+    inline void sort_alphabetically();
+    inline void sort_length();
+
+    // Searching
+    inline  iter find     (const std::function<bool(const std::string&)> func);
+    inline citer find     (const std::function<bool(const std::string&)> func) const;
+    inline  iter rfind    (const std::function<bool(const std::string&)> func);
+    inline citer rfind    (const std::function<bool(const std::string&)> func) const;
+    inline  iter find     (const std::string_view s);
+    inline citer find     (const std::string_view s) const;
+    inline  iter rfind    (const std::string_view s);
+    inline citer rfind    (const std::string_view s) const;
+    inline  iter find_reg (const std::string& regex);
+    inline citer find_reg (const std::string& regex) const;
+    inline  iter rfind_reg(const std::string& regex);
+    inline citer rfind_reg(const std::string& regex) const;
+ 
+    // Accessing
     inline std::vector<std::string>&       get();
     inline const std::vector<std::string>& get() const;
 
-    inline std::vector<std::string>::iterator begin();
-    inline std::vector<std::string>::const_iterator begin() const;
-    inline std::vector<std::string>::const_iterator cbegin() const;
-    inline std::vector<std::string>::iterator end();
-    inline std::vector<std::string>::const_iterator end() const;
-    inline std::vector<std::string>::const_iterator cend() const;
+    inline iter  begin();
+    inline citer begin() const;
+    inline citer cbegin() const;
+    inline iter  end();
+    inline citer end() const;
+    inline citer cend() const;
 
-    inline std::string& operator[](std::size_t index);
+    inline       std::string& operator[](std::size_t index);
     inline const std::string& operator[](std::size_t index) const;
 
     inline void print(std::ostream& os = std::cout) const;
@@ -200,18 +241,40 @@ inline void stringvec::read_file(const std::string_view path)
 
 
 /** -----------------------------------------------------------------------------------------------
+ * @brief Check all strings against a provided func, remove all strings that match.
+ * @param func: Function object to check against
+ */
+inline void stringvec::filter_remove(const std::function<bool(const std::string)> func)
+{
+    vec.erase(std::remove_if(vec.begin(), vec.end(), func),
+              vec.end());
+}
+
+/** -----------------------------------------------------------------------------------------------
  * @brief Check all strings against a provided regex, remove all strings that match the regex.
  * @param regex: Regular Expression to check against.
  */
-inline void stringvec::filter_remove(const std::string_view regex)
+inline void stringvec::filter_remove(const std::string& regex)
 {
-    std::regex reg{std::string{regex}};
+    std::regex reg{regex};
 
-    vec.erase(std::remove_if(vec.begin(),
-                             vec.end(),
-                             [&reg](const std::string& s) {
-                                 return std::regex_match(s, reg);
-                             }),
+
+    filter_remove([&reg](const std::string& s)
+                  {
+                      return std::regex_match(s, reg);
+                  });
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Check all strings against a provided func, keep only strings that match.
+ * @param func: Function object to check against
+ */
+inline void stringvec::filter_keep(const std::function<bool(const std::string)> func)
+{
+    vec.erase(std::remove_if(vec.begin(), vec.end(), [func](const std::string& s)
+                                                     {
+                                                         return !func(s);
+                                                     }),
               vec.end());
 }
 
@@ -219,28 +282,33 @@ inline void stringvec::filter_remove(const std::string_view regex)
  * @brief Check all strings against a provided regex, keep only strings that match the regex.
  * @param regex: Regular Expression to check against.
  */
-inline void stringvec::filter_keep(const std::string_view regex)
+inline void stringvec::filter_keep(const std::string& regex)
 {
-    std::regex reg{std::string{regex}};
+    std::regex reg{regex};
 
-    vec.erase(std::remove_if(vec.begin(),
-                             vec.end(),
-                             [&reg](const std::string& s) {
-                                 return !std::regex_match(s, reg);
-                             }),
-              vec.end());
+    filter_keep([&reg](const std::string& s)
+                {
+                    return std::regex_match(s, reg);
+                });
 }
 
-
 /** -----------------------------------------------------------------------------------------------
- * @brief Apply a function to all the elements of the vector
- * @param func: Function to apply
+ * @brief Remove all empty strings from the vector.
+ * @param keep_whitespace: If true, keep strings containing only whitespace.
  */
-inline void stringvec::transform(const std::function<std::string(const std::string_view)> func)
+inline void stringvec::filter_empty(bool keep_whitespace)
 {
-    std::for_each(begin(), end(), [func](std::string& s) {
-        s = func(s);
-    });
+    if (keep_whitespace)
+    {
+        filter_remove([](const std::string& s)
+                      {
+                          return s.empty();
+                      });
+    }
+    else
+    {
+        filter_remove("^\\s+$");
+    }
 }
 
 
@@ -261,14 +329,189 @@ inline void stringvec::remove_last()
 }
 
 /** -----------------------------------------------------------------------------------------------
-* @brief Remove an element from the vector from its index.
-*/
+ * @brief Remove an element from the vector from its index.
+ */
 inline void stringvec::remove_nth(std::size_t pos)
 {
     if (begin() + pos >= end())
         return;
 
     vec.erase(begin() + pos);
+}
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Apply a function to all the elements of the vector
+ * @param func: Function to apply
+ */
+inline void stringvec::transform(const std::function<std::string(const std::string)> func)
+{
+    std::for_each(begin(), end(), [func](std::string& s) {
+        s = func(s);
+    });
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Trim trailing and leading whitespace from all strings in the vector, including newlines.
+ */
+inline void stringvec::trim()
+{
+    transform([](const std::string s){
+        // https://cplusplus.com/forum/beginner/251052/
+        constexpr std::string_view whitespace = " \t\v\r\n";
+
+        std::size_t start = s.find_first_not_of(whitespace);
+        std::size_t end = s.find_last_not_of(whitespace);
+
+        return start == end ? std::string() : s.substr(start, end - start + 1);
+    });
+    
+}
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Reverse the order of the vector's elements.
+ */
+inline void stringvec::reverse()
+{
+    std::reverse(begin(), end());
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Sort each string in the vector in O(N logN)
+ * @param func: Comparison function
+ */
+inline void stringvec::sort(const std::function<bool(const std::string_view,
+                                                     const std::string_view)> func)
+{
+    std::sort(begin(), end(), func);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Sort the vector alphabetically
+ * 
+ * @details The sort function defaults to using operator<.
+ *          The default implementation of std::string provides an alphabetically-compared operator<
+ */
+inline void stringvec::sort_alphabetically()
+{
+    std::sort(begin(), end());
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Sort the vector by length of the strings
+ */
+inline void stringvec::sort_alphabetically()
+{
+    std::sort(begin(), end(), [](const std::string_view a, const std::string_view b)
+                              {
+                                  return a.length() < b.length();
+                              });
+}
+
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the first element matching the input function.
+ * @param func: Function to match in the vector.
+ */
+inline stringvec::iter stringvec::find(const std::function<bool(const std::string&)> func)
+{
+    return std::find(begin(), end(), func);
+}
+
+inline stringvec::citer stringvec::find(const std::function<bool(const std::string&)> func) const
+{
+    return const_cast<stringvec*>(this)->find(func);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the last element matching the input function.
+ * @param func: Function to match in the vector.
+ */
+inline stringvec::iter stringvec::rfind(const std::function<bool(const std::string&)> func)
+{
+    riter it = std::find(vec.rbegin(), vec.rend(), func);
+
+    // https://stackoverflow.com/q/4407985
+    if (it != vec.crend())
+    {
+        return iter{--(it.base())};
+    }
+    else
+    {
+        return vec.end();
+    }
+}
+
+inline stringvec::citer stringvec::rfind(const std::function<bool(const std::string&)> func) const
+{
+    return const_cast<stringvec*>(this)->rfind(func);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the first element matching the input string.
+ * @param s: String to find in the vector.
+ */
+inline stringvec::iter stringvec::find(const std::string_view s)
+{
+    return find([s](const std::string_view x){return x == s;});
+}
+
+inline stringvec::citer stringvec::find(const std::string_view s) const
+{
+    return const_cast<stringvec*>(this)->find(s);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the last element matching the input string.
+ * @param s: String to find in the vector.
+ */
+inline stringvec::iter stringvec::rfind(const std::string_view s)
+{
+    return rfind([s](const std::string_view x){return x == s;});
+}
+
+inline stringvec::citer stringvec::rfind(const std::string_view s) const
+{
+    return const_cast<stringvec*>(this)->rfind(s);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the first element matching the input regex.
+ * @param regex: Regex to match in the vector.
+ */
+inline stringvec::iter stringvec::find_reg(const std::string& regex)
+{
+    std::regex reg{regex};
+
+    return find([&reg](const std::string& s)
+                {
+                    return std::regex_match(s, reg);
+                });
+}
+
+inline stringvec::citer stringvec::find_reg(const std::string& regex) const
+{
+    return const_cast<stringvec*>(this)->find_reg(regex);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Find the last element matching the input regex.
+ * @param regex: Regex to match in the vector.
+ */
+inline stringvec::iter stringvec::rfind_reg(const std::string& regex)
+{
+    std::regex reg{regex};
+
+    return rfind([&reg](const std::string& s)
+                {
+                    return std::regex_match(s, reg);
+                });
+}
+
+inline stringvec::citer stringvec::rfind_reg(const std::string& regex) const
+{
+    return const_cast<stringvec*>(this)->rfind_reg(regex);
 }
 
 
@@ -289,17 +532,17 @@ inline const std::vector<std::string>& stringvec::get() const
 /** -----------------------------------------------------------------------------------------------
  * @brief Get an iterator to the first element of the vector.
  */
-inline std::vector<std::string>::iterator stringvec::begin()
+inline stringvec::iter stringvec::begin()
 {
     return vec.begin();
 }
 
-inline std::vector<std::string>::const_iterator stringvec::begin() const
+inline stringvec::citer stringvec::begin() const
 {
-    return begin();
+    return vec.cbegin();
 }
 
-inline std::vector<std::string>::const_iterator stringvec::cbegin() const
+inline stringvec::citer stringvec::cbegin() const
 {
     return begin();
 }
@@ -307,17 +550,17 @@ inline std::vector<std::string>::const_iterator stringvec::cbegin() const
 /** -----------------------------------------------------------------------------------------------
  * @brief Get an iterator to the last element of the vector.
  */
-inline std::vector<std::string>::iterator stringvec::end()
+inline stringvec::iter stringvec::end()
 {
     return vec.end();
 }
 
-inline std::vector<std::string>::const_iterator stringvec::end() const
+inline stringvec::citer stringvec::end() const
 {
-    return end();
+    return vec.cend();
 }
 
-inline std::vector<std::string>::const_iterator stringvec::cend() const
+inline stringvec::citer stringvec::cend() const
 {
     return end();
 }
@@ -330,9 +573,10 @@ inline std::string& stringvec::operator[](std::size_t index)
 {
     return vec[index];
 }
+
 inline const std::string& stringvec::operator[](std::size_t index) const
 {
-    return this->operator[](index);
+    return vec[index];
 }
 
 
