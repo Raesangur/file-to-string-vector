@@ -40,18 +40,18 @@
  *      - Project creation
  *      - Implementation of most class members
  *      - Creation of some unit tests, work remains to be done on unit tests
- * 
+ *
  * @version 0.2
  * 2024-02-16 - Raesangur
  *      - Added the `transform` method
- * 
+ *
  * @version 0.3
  * 2024-02-29 - Raesangur
  *      - Added an example to the documentation
  *      - Added the `remove_nth` method
  *      - Given an output stream parameter to the `print` method.
  *      - Various improvements
- * 
+ *
  * @version 0.4
  * 2024-05-09 - Raesangur
  *      - Inlined all methods
@@ -59,7 +59,7 @@
  *      - Added the `begin`, `cbegin`, `end` and `cend` methods
  *      - Added the [] operator
  *      - Fixed bug in `transform`
- * 
+ *
  * @version 0.5
  * 2024-05-20 - Raesangur
  *      - Added filter methods taking a function object
@@ -68,7 +68,11 @@
  *      - Added `reverse` method
  *      - Added `trim` method
  *      - Added member types iterators
- *      
+ *
+ * @version 0.6
+ * 2024-05-29 - Raesangur
+ *      - Added `split` method
+ *
  * ------------------------------------------------------------------------------------------------
  * @code
  * // Example usage:
@@ -82,7 +86,7 @@
  *      sv.remove_first();               // Remove first element
  *      sv.remove_last();                // Remove last element
  *      sv.print();                      // Print the filtered and transformed strings
- * 
+ *
  * // With example.txt as:
  *      pineapple
  *      lorem
@@ -94,14 +98,15 @@
  *      pear
  *      Apple
  *      apple pie
- * 
+ *
  * // Would print:
  *      BONEAPPLETEA
  *      APPLE
- *      
+ *
  * @endcode
  * ===============================================================================================
  */
+/* clang-format off */
 #ifndef STRINGVEC_H
 #define STRINGVEC_H
 
@@ -161,6 +166,7 @@ public:
     // Transforming
     inline void transform(const std::function<std::string(const std::string)> func);
     inline void trim();
+    inline void split(const std::string_view delimiter = " ");
 
     // Ordering
     inline void reverse();
@@ -257,7 +263,6 @@ inline void stringvec::filter_remove(const std::function<bool(const std::string)
 inline void stringvec::filter_remove(const std::string& regex)
 {
     std::regex reg{regex};
-
 
     filter_remove([&reg](const std::string& s)
                   {
@@ -368,6 +373,34 @@ inline void stringvec::trim()
     
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * @brief Split all strings in-place with a specified delimiter string.
+ *
+ * @param delimiter: String to use as a separation point for the string.
+ * 
+ * @details The delimiter string is removed from each split.
+ */
+inline void stringvec::split(const std::string_view delimiter)
+{
+    const std::size_t delimiterLength = delimiter.length();
+    std::vector<std::string> newStrings;
+    for (const std::string& s : vec)
+    {
+        // https://stackoverflow.com/a/46931770
+        std::size_t start = 0;
+        std::size_t end;
+
+        while ((end = s.find(delimiter, start)) != std::string::npos)
+        {
+            newStrings.emplace_back(s, start, end - start);
+            start = end + delimiterLength;
+        }
+        newStrings.emplace_back(s, start);
+    }
+
+    vec = std::move(newStrings);
+}
+
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Reverse the order of the vector's elements.
@@ -401,7 +434,7 @@ inline void stringvec::sort_alphabetically()
 /** -----------------------------------------------------------------------------------------------
  * @brief Sort the vector by length of the strings
  */
-inline void stringvec::sort_alphabetically()
+inline void stringvec::sort_length()
 {
     std::sort(begin(), end(), [](const std::string_view a, const std::string_view b)
                               {
@@ -416,7 +449,7 @@ inline void stringvec::sort_alphabetically()
  */
 inline stringvec::iter stringvec::find(const std::function<bool(const std::string&)> func)
 {
-    return std::find(begin(), end(), func);
+    return std::find_if(begin(), end(), func);
 }
 
 inline stringvec::citer stringvec::find(const std::function<bool(const std::string&)> func) const
@@ -430,7 +463,7 @@ inline stringvec::citer stringvec::find(const std::function<bool(const std::stri
  */
 inline stringvec::iter stringvec::rfind(const std::function<bool(const std::string&)> func)
 {
-    riter it = std::find(vec.rbegin(), vec.rend(), func);
+    riter it = std::find_if(vec.rbegin(), vec.rend(), func);
 
     // https://stackoverflow.com/q/4407985
     if (it != vec.crend())
@@ -602,6 +635,7 @@ inline void stringvec::print(std::ostream& os) const
 
 
 #endif        // STRINGVEC_H
+/* clang-format on */
 /**
  * ------------------------------------------------------------------------------------------------
  * @}
