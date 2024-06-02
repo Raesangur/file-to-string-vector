@@ -64,6 +64,7 @@ int main()
     sv.print();
     sv.filter_keep(".*berry");
     sv.print();
+    sv.write_file("output_test.txt");
 }
 
 

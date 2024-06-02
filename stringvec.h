@@ -73,6 +73,10 @@
  * 2024-05-29 - Raesangur
  *      - Added `split` method
  *
+ * @version 0.7
+ * 2024-06-02 - Raesangur
+ *      - Added the `write_file` method
+ *
  * ------------------------------------------------------------------------------------------------
  * @code
  * // Example usage:
@@ -120,8 +124,8 @@
 #include <iostream>
 #include <regex>
 #include <string>
+#include <type_traits>
 #include <vector>
-
 
 
 /** ===============================================================================================
@@ -150,7 +154,9 @@ public:
     stringvec(const stringvec&&) = delete;
     stringvec(const std::vector<std::string>& orig) : vec{orig} {};
 
-    inline void read_file(const std::string_view path);
+    inline void read_file (const std::string path);
+    inline void write_file(const std::string path, const std::string_view separator) const;
+    inline void write_file(const std::string path, char separator = '\n') const;
 
     // Filtering
     inline void filter_remove(const std::function<bool(const std::string)> func);
@@ -225,16 +231,15 @@ private:
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Read a file line by line, pushing each line into the vector of string.
- * @param path File to read the line from.
+ * @param path: File to read the lines from.
  */
-inline void stringvec::read_file(const std::string_view path)
+inline void stringvec::read_file(const std::string path)
 {
-    std::string pathString{path};
     /* Check if file is valid and open it. */
-    std::ifstream input(pathString);
+    std::ifstream input(path);
     if(!input)
     {
-        throw std::runtime_error("Couldn't open file: " + pathString);
+        throw std::runtime_error("Couldn't open file: " + path);
     }
 
     /* Read all lines of file into the vector. */
@@ -245,6 +250,37 @@ inline void stringvec::read_file(const std::string_view path)
     }
 }
 
+/** -----------------------------------------------------------------------------------------------
+ * @brief Write to a file every string from the vector, separated by a specified string.
+ * @param path:      File to write the strings to.
+ * @param separator: Separator string between the strings in the vector when writing back to file.
+ */
+inline void stringvec::write_file(const std::string path, const std::string_view separator) const
+{
+    /* Check if file is valid and open it. */
+    std::ofstream output(path);
+    if (!output)
+    {
+        throw std::runtime_error("Couldn't write to file: " + path);
+    }
+
+    /* Write all strings of vector into file. */
+    for(citer it = begin(); it < end(); it++)
+    {
+        output << *it;
+        if (it != end() - 1)
+        {
+            output << separator;
+        }
+    }
+    output.flush();
+}
+
+inline void stringvec::write_file(const std::string path, char separator) const
+{
+    char sep[2] = {separator, '\0'};
+    return write_file(path, sep);
+}
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Check all strings against a provided func, remove all strings that match.
@@ -384,7 +420,7 @@ inline void stringvec::split(const std::string_view delimiter)
 {
     const std::size_t delimiterLength = delimiter.length();
     std::vector<std::string> newStrings;
-    for (const std::string& s : vec)
+    for (const std::string& s : *this)
     {
         // https://stackoverflow.com/a/46931770
         std::size_t start = 0;
@@ -618,7 +654,7 @@ inline const std::string& stringvec::operator[](std::size_t index) const
  */
 inline void stringvec::print(std::ostream& os) const
 {
-    for(const std::string& s : vec)
+    for(const std::string& s : *this)
     {
         os << s << '\n';
     }
