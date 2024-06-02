@@ -50,12 +50,32 @@
 
 
 /** ===============================================================================================
+ *  TYPE DEFINITIONS
+ */
+using err_t = int;
+
+/** ===============================================================================================
+ *  CONSTANTS DEFINITIONS
+ */
+constexpr err_t TEST_SUCCESS = 0;
+constexpr err_t TEST_ERROR   = -1;
+
+/** ===============================================================================================
+ *  FUNCTION DECLARATIONS
+ */
+err_t integration_test();
+
+
+static std::pair<stringvec, stringvec> load_test(const std::string& path);
+
+/** ===============================================================================================
  *  FUNCTION DEFINITIONS
  */
 
-int main()
+err_t integration_test()
 {
-    stringvec sv;
+    const stringvec valid = {"Raspberry", "Blueberry"};
+    stringvec       sv;
 
     sv.read_file("input_test.txt");
     sv.remove_first();
@@ -65,7 +85,44 @@ int main()
     sv.filter_keep(".*berry");
     sv.print();
     sv.write_file("output_test.txt");
+
+    if(sv != valid)
+    {
+        return TEST_ERROR;
+    }
+    return TEST_SUCCESS;
 }
+
+
+
+/* ------------------------------------------- */
+int main()
+{
+    if(integration_test() == TEST_ERROR)
+    {
+        return TEST_ERROR;
+    }
+
+
+
+    return 0;
+}
+
+
+/** ===============================================================================================
+ *  PRIVATE FUNCTION DEFINITIONS
+ */
+
+static std::pair<stringvec, stringvec> load_test(const std::string& path)
+{
+    stringvec input;
+    stringvec answer;
+    input.read_file(path);
+    answer.read_file(path + "-answer");
+
+    return {input, answer};
+}
+
 
 
 /**

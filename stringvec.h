@@ -76,6 +76,7 @@
  * @version 0.7
  * 2024-06-02 - Raesangur
  *      - Added the `write_file` method
+ *      - Added the == and != operators, as well as the <=> operator
  *
  * ------------------------------------------------------------------------------------------------
  * @code
@@ -148,15 +149,20 @@ public:
     using citer  = std::vector<std::string>::const_iterator;
     using criter = std::vector<std::string>::const_reverse_iterator;
 
+    // Constructors / Destructors
     ~stringvec()                 = default;
     stringvec()                  = default;
     stringvec(const stringvec&)  = default;
     stringvec(const stringvec&&) = delete;
     stringvec(const std::vector<std::string>& orig) : vec{orig} {};
+    stringvec(const std::initializer_list<std::string>&& orig) : vec{orig} {};
 
-    inline void read_file (const std::string path);
-    inline void write_file(const std::string path, const std::string_view separator) const;
-    inline void write_file(const std::string path, char separator = '\n') const;
+    // Input / Output
+    inline void read_file (const std::string& path);
+    inline void write_file(const std::string& path, const std::string_view sep) const;
+    inline void write_file(const std::string& path, char sep = '\n') const;
+
+    inline void print(std::ostream& os = std::cout, const std::string_view sep = "\n") const;
 
     // Filtering
     inline void filter_remove(const std::function<bool(const std::string)> func);
@@ -209,7 +215,11 @@ public:
     inline       std::string& operator[](std::size_t index);
     inline const std::string& operator[](std::size_t index) const;
 
-    inline void print(std::ostream& os = std::cout) const;
+    // Comparison
+    inline bool operator== (const stringvec& other) const;
+    inline bool operator!= (const stringvec& other) const;
+    inline std::strong_ordering operator<=>(const stringvec& other) const;
+
 
 private:
     std::vector<std::string> vec;
@@ -233,7 +243,7 @@ private:
  * @brief Read a file line by line, pushing each line into the vector of string.
  * @param path: File to read the lines from.
  */
-inline void stringvec::read_file(const std::string path)
+inline void stringvec::read_file(const std::string& path)
 {
     /* Check if file is valid and open it. */
     std::ifstream input(path);
@@ -252,10 +262,10 @@ inline void stringvec::read_file(const std::string path)
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Write to a file every string from the vector, separated by a specified string.
- * @param path:      File to write the strings to.
- * @param separator: Separator string between the strings in the vector when writing back to file.
+ * @param path: File to write the strings to.
+ * @param sep:  Separator string between the strings in the vector when writing back to file.
  */
-inline void stringvec::write_file(const std::string path, const std::string_view separator) const
+inline void stringvec::write_file(const std::string& path, const std::string_view sep) const
 {
     /* Check if file is valid and open it. */
     std::ofstream output(path);
@@ -264,23 +274,32 @@ inline void stringvec::write_file(const std::string path, const std::string_view
         throw std::runtime_error("Couldn't write to file: " + path);
     }
 
+    print(output, sep);
+}
+
+inline void stringvec::write_file(const std::string& path, char sep) const
+{
+    char separator[2] = {sep, '\0'};
+    return write_file(path, separator);
+}
+
+/** -----------------------------------------------------------------------------------------------
+ * @brief Print the vector of strings line by line, then flush the output buffer.
+ */
+inline void stringvec::print(std::ostream& os, const std::string_view sep) const
+{
     /* Write all strings of vector into file. */
     for(citer it = begin(); it < end(); it++)
     {
-        output << *it;
+        os << *it;
         if (it != end() - 1)
         {
-            output << separator;
+            os << sep;
         }
     }
-    output.flush();
+    os.flush();
 }
 
-inline void stringvec::write_file(const std::string path, char separator) const
-{
-    char sep[2] = {separator, '\0'};
-    return write_file(path, sep);
-}
 
 /** -----------------------------------------------------------------------------------------------
  * @brief Check all strings against a provided func, remove all strings that match.
@@ -649,25 +668,27 @@ inline const std::string& stringvec::operator[](std::size_t index) const
 }
 
 
-/** -----------------------------------------------------------------------------------------------
- * @brief Print the vector of strings line by line, then flush the output buffer.
- */
-inline void stringvec::print(std::ostream& os) const
-{
-    for(const std::string& s : *this)
-    {
-        os << s << '\n';
-    }
 
-    // Add new line and flush output buffer
-    os << std::endl;
+inline bool stringvec::operator== (const stringvec& other) const
+{
+    return vec == other.vec;
 }
+
+inline bool stringvec::operator!= (const stringvec& other) const
+{
+    return !(*this == other);
+}
+
+inline std::strong_ordering stringvec::operator<=>(const stringvec& other) const
+{
+    return vec <=> other.vec;
+}
+
 
 
 /**
  * @}
  */
-
 
 
 #endif        // STRINGVEC_H
