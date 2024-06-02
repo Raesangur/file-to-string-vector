@@ -162,7 +162,9 @@ public:
     inline void write_file(const std::string& path, const std::string_view sep) const;
     inline void write_file(const std::string& path, char sep = '\n') const;
 
-    inline void print(std::ostream& os = std::cout, const std::string_view sep = "\n") const;
+    inline void print(std::ostream& os = std::cout,
+                      const std::string_view sep = "\n",
+                      bool keep_last_sep = true) const;
 
     // Filtering
     inline void filter_remove(const std::function<bool(const std::string)> func);
@@ -274,7 +276,7 @@ inline void stringvec::write_file(const std::string& path, const std::string_vie
         throw std::runtime_error("Couldn't write to file: " + path);
     }
 
-    print(output, sep);
+    print(output, sep, false);
 }
 
 inline void stringvec::write_file(const std::string& path, char sep) const
@@ -286,13 +288,15 @@ inline void stringvec::write_file(const std::string& path, char sep) const
 /** -----------------------------------------------------------------------------------------------
  * @brief Print the vector of strings line by line, then flush the output buffer.
  */
-inline void stringvec::print(std::ostream& os, const std::string_view sep) const
+inline void stringvec::print(std::ostream& os,
+                             const std::string_view sep,
+                             bool keep_last_sep) const
 {
     /* Write all strings of vector into file. */
     for(citer it = begin(); it < end(); it++)
     {
         os << *it;
-        if (it != end() - 1)
+        if ((it != end() - 1) || keep_last_sep == true)
         {
             os << sep;
         }

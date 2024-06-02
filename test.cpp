@@ -63,14 +63,71 @@ constexpr err_t TEST_ERROR   = -1;
 /** ===============================================================================================
  *  FUNCTION DECLARATIONS
  */
+err_t comparison_test();
+err_t remove_test();
+
 err_t integration_test();
 
 
 static std::pair<stringvec, stringvec> load_test(const std::string& path);
 
+
 /** ===============================================================================================
  *  FUNCTION DEFINITIONS
  */
+
+err_t comparison_test()
+{
+    stringvec sv  = {"aaa", "bbb", "ccc"};
+    stringvec sv2 = {"aaa", "bbb", "ccc"};
+    stringvec sv3 = {"aaa", "bbb"};
+    stringvec sv4 = {"aaa", "bbb", "aaa"};
+
+    if(sv != sv2)
+    {
+        return TEST_ERROR;
+    }
+
+    if(sv == sv3)
+    {
+        return TEST_ERROR;
+    }
+
+    if(sv == sv4)
+    {
+        return TEST_ERROR;
+    }
+
+    return TEST_SUCCESS;
+}
+
+err_t remove_test()
+{
+    stringvec sv       = {"aaa", "bbb", "ccc", "ddd", "eee"};
+    stringvec sv_first = {"bbb", "ccc", "ddd", "eee"};
+    stringvec sv_last  = {"bbb", "ccc", "ddd"};
+    stringvec sv_2nd   = {"bbb", "ddd"};
+
+    sv.remove_first();
+    if(sv != sv_first)
+    {
+        return TEST_ERROR;
+    }
+
+    sv.remove_last();
+    if(sv != sv_last)
+    {
+        return TEST_ERROR;
+    }
+
+    sv.remove_nth(1);
+    if(sv != sv_2nd)
+    {
+        return TEST_ERROR;
+    }
+
+    return TEST_SUCCESS;
+}
 
 err_t integration_test()
 {
@@ -81,9 +138,9 @@ err_t integration_test()
     sv.remove_first();
     sv.split();
     sv.filter_remove(".*[Aa]pple.*");
-    sv.print();
+    // sv.print();
     sv.filter_keep(".*berry");
-    sv.print();
+    // sv.print();
     sv.write_file("output_test.txt");
 
     if(sv != valid)
@@ -98,14 +155,27 @@ err_t integration_test()
 /* ------------------------------------------- */
 int main()
 {
-    if(integration_test() == TEST_ERROR)
+    if(comparison_test() == TEST_ERROR)
     {
+        std::cout << "FAIL" << std::endl;
+        return TEST_ERROR;
+    }
+
+    if(remove_test() == TEST_ERROR)
+    {
+        std::cout << "FAIL" << std::endl;
         return TEST_ERROR;
     }
 
 
+    if(integration_test() == TEST_ERROR)
+    {
+        std::cout << "FAIL" << std::endl;
+        return TEST_ERROR;
+    }
 
-    return 0;
+    std::cout << "SUCCESS" << std::endl;
+    return TEST_SUCCESS;
 }
 
 
