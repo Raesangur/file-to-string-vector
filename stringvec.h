@@ -321,12 +321,22 @@ inline void stringvec::filter_remove(const std::function<bool(const std::string)
  */
 inline void stringvec::filter_remove(const std::string& regex)
 {
-    std::regex reg{regex};
+    try
+    {
+        std::regex reg{regex};
 
-    filter_remove([&reg](const std::string& s)
-                  {
-                      return std::regex_match(s, reg);
-                  });
+        filter_remove([&reg](const std::string& s)
+                    {
+                        return std::regex_match(s, reg);
+                    });
+    }
+    catch (const std::regex_error& e)
+    {
+        std::cerr << "Error: Invalid regex pattern '" << regex << "'. "
+                  << "Details: " << e.what() << std::endl;
+
+        return end();
+    }
 }
 
 /** -----------------------------------------------------------------------------------------------
@@ -348,12 +358,22 @@ inline void stringvec::filter_keep(const std::function<bool(const std::string)> 
  */
 inline void stringvec::filter_keep(const std::string& regex)
 {
-    std::regex reg{regex};
+    try
+    {
+        std::regex reg{regex};
 
-    filter_keep([&reg](const std::string& s)
-                {
-                    return std::regex_match(s, reg);
-                });
+        filter_keep([&reg](const std::string& s)
+                    {
+                        return std::regex_match(s, reg);
+                    });
+    }
+    catch (const std::regex_error& e)
+    {
+        std::cerr << "Error: Invalid regex pattern '" << regex << "'. "
+                  << "Details: " << e.what() << std::endl;
+
+        return end();
+    }
 }
 
 /** -----------------------------------------------------------------------------------------------
@@ -574,12 +594,22 @@ inline stringvec::citer stringvec::rfind(const std::string_view s) const
  */
 inline stringvec::iter stringvec::find_reg(const std::string& regex)
 {
-    std::regex reg{regex};
+    try
+    {
+        std::regex reg{regex};
 
-    return find([&reg](const std::string& s)
-                {
-                    return std::regex_match(s, reg);
-                });
+        return find([&reg](const std::string& s)
+                    {
+                        return std::regex_match(s, reg);
+                    });
+    }
+    catch (const std::regex_error& e)
+    {
+        std::cerr << "Error: Invalid regex pattern '" << regex << "'. "
+                  << "Details: " << e.what() << std::endl;
+
+        return end();
+    }
 }
 
 inline stringvec::citer stringvec::find_reg(const std::string& regex) const
@@ -593,12 +623,22 @@ inline stringvec::citer stringvec::find_reg(const std::string& regex) const
  */
 inline stringvec::iter stringvec::rfind_reg(const std::string& regex)
 {
-    std::regex reg{regex};
+    try
+    {
+        std::regex reg{regex};
 
-    return rfind([&reg](const std::string& s)
-                {
-                    return std::regex_match(s, reg);
-                });
+        return rfind([&reg](const std::string& s)
+                    {
+                        return std::regex_match(s, reg);
+                    });
+    }
+    catch (const std::regex_error& e)
+    {
+        std::cerr << "Error: Invalid regex pattern '" << regex << "'. "
+                  << "Details: " << e.what() << std::endl;
+
+        return rend();
+    }
 }
 
 inline stringvec::citer stringvec::rfind_reg(const std::string& regex) const
